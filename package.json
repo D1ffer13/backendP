@@ -1,0 +1,16 @@
+{
+  "name": "education-crm",
+  "version": "1.0.0",
+  "description": "Education CRM System",
+  "scripts": {
+    "setup": "node setup-project.js",
+    "install-deps": "node install-dependencies.js",
+    "full-setup": "node full-setup.js",
+    "start": "node quick-start.js",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev"
+  },
+  "keywords": ["crm", "education", "react", "nodejs"],
+  "author": "",
+  "license": "ISC"
+}
