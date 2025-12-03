@@ -1,22 +1,17 @@
-async function startServer() {
-  console.log('DB config:', {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    db: process.env.DB_NAME,
-  });
+// backend/config/db.js
+const mysql = require('mysql2/promise');
 
-  try {
-    await db.query('SELECT 1');
-    console.log('✅ Database connected');
-  } catch (err) {
-    console.error('❌ Database connection error:', err);
-  }
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: Number(process.env.DB_PORT) || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  timezone: '+00:00',
+  dateStrings: true,
+});
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📘 API docs: http://localhost:${PORT}/api`);
-  });
-}
-
-startServer();
+module.exports = pool;
