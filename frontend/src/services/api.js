@@ -2,9 +2,12 @@
 import axios from 'axios';
 import { authService } from './authService';
 
+// для Vite переменные начинаются с VITE_
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  withCredentials: false
+  baseURL: API_BASE_URL,
+  withCredentials: false,
 });
 
 api.interceptors.request.use((config) => {
