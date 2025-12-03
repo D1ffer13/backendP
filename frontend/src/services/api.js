@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { authService } from './authService';
 
-// для Vite переменные берутся из import.meta.env
+// Берём базовый URL из переменной окружения Vite
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
