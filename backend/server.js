@@ -10,8 +10,18 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://dynamic-nourishment-production.up.railway.app', // сюда подставь реальный URL фронта
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000', // можно потом заменить на адрес фронта на Railway
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 
