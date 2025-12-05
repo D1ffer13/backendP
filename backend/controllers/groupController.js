@@ -1,10 +1,9 @@
 // backend/controllers/groupController.js
 const db = require('../config/db');
 
-// GET /api/groups
 const getGroups = async (req, res) => {
   try {
-    console.log('📚 GET /api/groups request'); // ✅ Лог
+    console.log('📚 GET /api/groups request');
     
     const { teacher_id, subject_id, status } = req.query;
     const where = [];
@@ -30,7 +29,7 @@ const getGroups = async (req, res) => {
               COALESCE(s.name, 'Без предмета') AS subject_name,
               COALESCE(t.first_name, 'Без') AS teacher_first_name,
               COALESCE(t.last_name, 'педагога') AS teacher_last_name
-       FROM groups g
+       FROM \`groups\` g
        LEFT JOIN subjects s ON g.subject_id = s.id
        LEFT JOIN teachers t ON g.teacher_id = t.id
        ${whereSql}
@@ -38,15 +37,14 @@ const getGroups = async (req, res) => {
       params
     );
 
-    console.log(`✅ Groups fetched: ${rows.length}`); // ✅ Лог
+    console.log(`✅ Groups fetched: ${rows.length}`);
     res.json(rows);
   } catch (error) {
-    console.error('❌ Error fetching groups:', error); // ✅ Лог
+    console.error('❌ Error fetching groups:', error);
     res.status(500).json({ error: 'Failed to fetch groups', details: error.message });
   }
 };
 
-// POST /api/groups
 const createGroup = async (req, res) => {
   try {
     const { name, subject_id, teacher_id, max_students, status, notes } = req.body;
@@ -64,12 +62,12 @@ const createGroup = async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO groups (name, subject_id, teacher_id, max_students, status, notes)
+      `INSERT INTO \`groups\` (name, subject_id, teacher_id, max_students, status, notes)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [name, subject_id, teacher_id, max_students || null, status || 'active', notes || null]
     );
 
-    const [rows] = await db.query('SELECT * FROM groups WHERE id = ?', [result.insertId]);
+    const [rows] = await db.query('SELECT * FROM `groups` WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating group:', error);
@@ -77,13 +75,12 @@ const createGroup = async (req, res) => {
   }
 };
 
-// PUT /api/groups/:id
 const updateGroup = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, subject_id, teacher_id, max_students, status, notes } = req.body;
 
-    const [existing] = await db.query('SELECT * FROM groups WHERE id = ?', [id]);
+    const [existing] = await db.query('SELECT * FROM `groups` WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Group not found' });
     }
@@ -100,22 +97,18 @@ const updateGroup = async (req, res) => {
     }
 
     await db.query(
-      `UPDATE groups
+      `UPDATE \`groups\`
        SET name = ?, subject_id = ?, teacher_id = ?, max_students = ?,
            status = ?, notes = ?
        WHERE id = ?`,
       [
-        name || existing[0].name,
-        subjectId,
-        teacherId,
-        max_students || null,
-        status || existing[0].status,
-        notes || null,
-        id
+        name || existing[0].name, subjectId, teacherId,
+        max_students || null, status || existing[0].status,
+        notes || null, id
       ]
     );
 
-    const [rows] = await db.query('SELECT * FROM groups WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT * FROM `groups` WHERE id = ?', [id]);
     res.json(rows[0]);
   } catch (error) {
     console.error('Error updating group:', error);
@@ -123,11 +116,10 @@ const updateGroup = async (req, res) => {
   }
 };
 
-// DELETE /api/groups/:id
 const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query('DELETE FROM groups WHERE id = ?', [id]);
+    await db.query('DELETE FROM `groups` WHERE id = ?', [id]);
     res.json({ message: 'Group deleted' });
   } catch (error) {
     console.error('Error deleting group:', error);
@@ -135,7 +127,6 @@ const deleteGroup = async (req, res) => {
   }
 };
 
-// GET /api/groups/:id/students
 const getGroupStudents = async (req, res) => {
   try {
     const { id } = req.params;
@@ -154,7 +145,6 @@ const getGroupStudents = async (req, res) => {
   }
 };
 
-// POST /api/groups/:id/students { student_ids: [...] }
 const setGroupStudents = async (req, res) => {
   try {
     const { id } = req.params;
@@ -168,10 +158,7 @@ const setGroupStudents = async (req, res) => {
 
     if (student_ids.length) {
       const values = student_ids.map((sid) => [id, sid]);
-      await db.query(
-        'INSERT INTO group_students (group_id, student_id) VALUES ?',
-        [values]
-      );
+      await db.query('INSERT INTO group_students (group_id, student_id) VALUES ?', [values]);
     }
 
     const [rows] = await db.query(
