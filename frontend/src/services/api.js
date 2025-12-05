@@ -4,7 +4,8 @@ import { authService } from './authService';
 
 // БАЗОВЫЙ URL ТВОЕГО БЭКЕНДА НА RAILWAY
 // ПОДСТАВЬ СВОЙ АДРЕС ВМЕСТО ПРИМЕРА!
-const API_BASE_URL = 'https://backendp-production.up.railway.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://backendp-production.up.railway.app';
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
