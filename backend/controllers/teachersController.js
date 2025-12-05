@@ -139,10 +139,7 @@ const updateTeacher = async (req, res) => {
   }
 };
 
-// ПОЛНОЕ удаление педагога:
-// - у уроков teacher_id обнуляем
-// - удаляем связи teacher_subjects
-// - удаляем самого педагога
+// ПОЛНОЕ удаление педагога
 const deleteTeacher = async (req, res) => {
   try {
     const { id } = req.params;
@@ -156,6 +153,11 @@ const deleteTeacher = async (req, res) => {
 
     // Обнуляем привязку к педагогу в уроках
     await db.query('UPDATE lessons SET teacher_id = NULL WHERE teacher_id = ?', [
+      id
+    ]);
+
+    // Обнуляем привязку к педагогу в группах
+    await db.query('UPDATE lesson_groups SET teacher_id = NULL WHERE teacher_id = ?', [
       id
     ]);
 
@@ -230,13 +232,13 @@ const setTeacherSubjects = async (req, res) => {
   }
 };
 
-// GET /api/teachers/:id/groups
+// GET /api/teachers/:id/groups - ИСПРАВЛЕНО!
 const getTeacherGroups = async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await db.query(
       `SELECT g.*, s.name AS subject_name
-       FROM groups g
+       FROM lesson_groups g
        JOIN subjects s ON g.subject_id = s.id
        WHERE g.teacher_id = ?
        ORDER BY g.name`,
@@ -245,7 +247,7 @@ const getTeacherGroups = async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error('Error fetching teacher groups:', error);
-    res.status(500).json({ error: 'Failed to fetch teacher groups' });
+    res.status(500).json({ error: 'Failed to fetch teacher groups', details: error.message });
   }
 };
 
