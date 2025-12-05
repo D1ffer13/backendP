@@ -2,7 +2,6 @@
 
 const db = require('../config/db');
 
-// Форматирование даты в YYYY-MM-DD
 const formatDateOnly = (date) => {
   if (!date) return null;
   const d = new Date(date);
@@ -12,7 +11,6 @@ const formatDateOnly = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Обработка дат в уроках
 const processLessonDates = (lessons) => {
   return lessons.map((lesson) => ({
     ...lesson,
@@ -20,12 +18,7 @@ const processLessonDates = (lessons) => {
   }));
 };
 
-// Проверка связки педагог–предмет–группа
-const validateTeacherSubjectGroup = async ({
-  teacher_id,
-  subject_id,
-  group_id
-}) => {
+const validateTeacherSubjectGroup = async ({ teacher_id, subject_id, group_id }) => {
   if (!teacher_id || !subject_id || !group_id) {
     return null;
   }
@@ -39,7 +32,7 @@ const validateTeacherSubjectGroup = async ({
   }
 
   const [g] = await db.query(
-    'SELECT 1 FROM groups WHERE id = ? AND teacher_id = ? AND subject_id = ?',
+    'SELECT 1 FROM `groups` WHERE id = ? AND teacher_id = ? AND subject_id = ?',
     [group_id, teacher_id, subject_id]
   );
   if (g.length === 0) {
@@ -49,30 +42,21 @@ const validateTeacherSubjectGroup = async ({
   return null;
 };
 
-// ===== CRUD уроков =====
-
 const getAllLessons = async (req, res) => {
   try {
-    console.log('📚 GET /api/lessons request'); // ✅ Лог
+    console.log('📚 GET /api/lessons request');
     
-    const {
-      start_date,
-      end_date,
-      teacher_id,
-      status,
-      subject_id,
-      group_id
-    } = req.query;
+    const { start_date, end_date, teacher_id, status, subject_id, group_id } = req.query;
     const user = req.user;
 
     let query = `
       SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
+        t.first_name AS teacher_first_name,
+        t.last_name AS teacher_last_name,
         t.middle_name AS teacher_middle_name,
-        s.name        AS subject_name,
-        g.name        AS group_name,
+        s.name AS subject_name,
+        g.name AS group_name,
         (SELECT COUNT(*) 
            FROM enrollments e 
           WHERE e.lesson_id = l.id 
@@ -80,7 +64,7 @@ const getAllLessons = async (req, res) => {
       FROM lessons l
       LEFT JOIN teachers t ON l.teacher_id = t.id
       LEFT JOIN subjects s ON l.subject_id = s.id
-      LEFT JOIN groups   g ON l.group_id   = g.id
+      LEFT JOIN \`groups\` g ON l.group_id = g.id
       WHERE 1=1
     `;
 
@@ -121,15 +105,15 @@ const getAllLessons = async (req, res) => {
       params.push(group_id);
     }
 
-    query += ' ORDER BY l.lesson_date DESC, l.start_time DESC'; // ✅ ИСПРАВЛЕНО: было "DE"
+    query += ' ORDER BY l.lesson_date DESC, l.start_time DESC';
 
     const [lessons] = await db.query(query, params);
     const processedLessons = processLessonDates(lessons);
     
-    console.log(`✅ Lessons fetched: ${processedLessons.length}`); // ✅ Лог
+    console.log(`✅ Lessons fetched: ${processedLessons.length}`);
     res.json(processedLessons);
   } catch (error) {
-    console.error('❌ Error fetching lessons:', error); // ✅ Лог
+    console.error('❌ Error fetching lessons:', error);
     res.status(500).json({ error: 'Failed to fetch lessons', details: error.message });
   }
 };
@@ -142,15 +126,15 @@ const getLessonById = async (req, res) => {
     const [lessons] = await db.query(
       `SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
+        t.first_name AS teacher_first_name,
+        t.last_name AS teacher_last_name,
         t.middle_name AS teacher_middle_name,
-        s.name        AS subject_name,
-        g.name        AS group_name
+        s.name AS subject_name,
+        g.name AS group_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN groups   g ON l.group_id   = g.id
+       LEFT JOIN \`groups\` g ON l.group_id = g.id
        WHERE l.id = ?`,
       [id]
     );
@@ -170,7 +154,7 @@ const getLessonById = async (req, res) => {
     const [students] = await db.query(
       `SELECT 
         s.*,
-        e.id     AS enrollment_id,
+        e.id AS enrollment_id,
         e.status AS enrollment_status,
         e.enrollment_date
        FROM enrollments e
@@ -192,16 +176,8 @@ const getLessonById = async (req, res) => {
 const createLesson = async (req, res) => {
   try {
     const {
-      teacher_id,
-      subject,
-      subject_id,
-      group_id,
-      lesson_date,
-      start_time,
-      end_time,
-      max_students,
-      description,
-      status,
+      teacher_id, subject, subject_id, group_id, lesson_date,
+      start_time, end_time, max_students, description, status,
       auto_enroll_group_students
     } = req.body;
 
@@ -217,9 +193,7 @@ const createLesson = async (req, res) => {
 
     if (user.role === 'teacher') {
       if (!user.teacher_id) {
-        return res
-          .status(400)
-          .json({ error: 'Teacher ID not found for your account' });
+        return res.status(400).json({ error: 'Teacher ID not found for your account' });
       }
       finalTeacherId = user.teacher_id;
     } else if (user.role === 'admin') {
@@ -229,9 +203,7 @@ const createLesson = async (req, res) => {
       finalTeacherId = teacher_id;
     }
 
-    const [teacher] = await db.query('SELECT * FROM teachers WHERE id = ?', [
-      finalTeacherId
-    ]);
+    const [teacher] = await db.query('SELECT * FROM teachers WHERE id = ?', [finalTeacherId]);
     if (teacher.length === 0) {
       return res.status(404).json({ error: 'Teacher not found' });
     }
@@ -254,16 +226,9 @@ const createLesson = async (req, res) => {
        (teacher_id, subject, subject_id, group_id, lesson_date, start_time, end_time, max_students, description, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        finalTeacherId,
-        subject || null,
-        subject_id || null,
-        group_id || null,
-        formattedDate,
-        start_time,
-        end_time,
-        max_students || 10,
-        description || null,
-        status || 'scheduled'
+        finalTeacherId, subject || null, subject_id || null, group_id || null,
+        formattedDate, start_time, end_time, max_students || 10,
+        description || null, status || 'scheduled'
       ]
     );
 
@@ -277,39 +242,29 @@ const createLesson = async (req, res) => {
         );
 
         if (groupStudents.length > 0) {
-          const values = groupStudents.map((row) => [
-            lessonId,
-            row.student_id,
-            'enrolled'
-          ]);
-
+          const values = groupStudents.map((row) => [lessonId, row.student_id, 'enrolled']);
           await db.query(
-            `INSERT IGNORE INTO enrollments (lesson_id, student_id, status)
-             VALUES ?`,
+            `INSERT IGNORE INTO enrollments (lesson_id, student_id, status) VALUES ?`,
             [values]
           );
         }
       } catch (e) {
-        console.error(
-          'Error auto-enrolling group students for lesson',
-          lessonId,
-          e
-        );
+        console.error('Error auto-enrolling group students for lesson', lessonId, e);
       }
     }
 
     const [newLesson] = await db.query(
       `SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
+        t.first_name AS teacher_first_name,
+        t.last_name AS teacher_last_name,
         t.middle_name AS teacher_middle_name,
-        s.name        AS subject_name,
-        g.name        AS group_name
+        s.name AS subject_name,
+        g.name AS group_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN groups   g ON l.group_id   = g.id
+       LEFT JOIN \`groups\` g ON l.group_id = g.id
        WHERE l.id = ?`,
       [lessonId]
     );
@@ -318,9 +273,7 @@ const createLesson = async (req, res) => {
     res.status(201).json(processedLesson);
   } catch (error) {
     console.error('Error creating lesson:', error);
-    res
-      .status(500)
-      .json({ error: 'Failed to create lesson', details: error.message });
+    res.status(500).json({ error: 'Failed to create lesson', details: error.message });
   }
 };
 
@@ -328,24 +281,14 @@ const updateLesson = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      teacher_id,
-      subject,
-      subject_id,
-      group_id,
-      lesson_date,
-      start_time,
-      end_time,
-      max_students,
-      description,
-      status,
+      teacher_id, subject, subject_id, group_id, lesson_date,
+      start_time, end_time, max_students, description, status,
       auto_enroll_on_update
     } = req.body;
 
     const user = req.user;
 
-    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [
-      id
-    ]);
+    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
@@ -388,9 +331,7 @@ const updateLesson = async (req, res) => {
       [
         finalTeacherId,
         subject !== undefined ? subject : lesson.subject,
-        newSubjectId,
-        newGroupId,
-        formattedDate,
+        newSubjectId, newGroupId, formattedDate,
         start_time || lesson.start_time,
         end_time || lesson.end_time,
         max_students != null ? max_students : lesson.max_students,
@@ -408,39 +349,29 @@ const updateLesson = async (req, res) => {
         );
 
         if (groupStudents.length > 0) {
-          const values = groupStudents.map((row) => [
-            id,
-            row.student_id,
-            'enrolled'
-          ]);
-
+          const values = groupStudents.map((row) => [id, row.student_id, 'enrolled']);
           await db.query(
-            `INSERT IGNORE INTO enrollments (lesson_id, student_id, status)
-             VALUES ?`,
+            `INSERT IGNORE INTO enrollments (lesson_id, student_id, status) VALUES ?`,
             [values]
           );
         }
       } catch (e) {
-        console.error(
-          'Error auto-enrolling group students on update for lesson',
-          id,
-          e
-        );
+        console.error('Error auto-enrolling group students on update for lesson', id, e);
       }
     }
 
     const [updatedLesson] = await db.query(
       `SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
+        t.first_name AS teacher_first_name,
+        t.last_name AS teacher_last_name,
         t.middle_name AS teacher_middle_name,
-        s.name        AS subject_name,
-        g.name        AS group_name
+        s.name AS subject_name,
+        g.name AS group_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN groups   g ON l.group_id   = g.id
+       LEFT JOIN \`groups\` g ON l.group_id = g.id
        WHERE l.id = ?`,
       [id]
     );
@@ -457,9 +388,7 @@ const deleteLesson = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [
-      id
-    ]);
+    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
@@ -486,11 +415,11 @@ const getWeekSchedule = async (req, res) => {
     let query = `
       SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
+        t.first_name AS teacher_first_name,
+        t.last_name AS teacher_last_name,
         t.middle_name AS teacher_middle_name,
-        s.name        AS subject_name,
-        g.name        AS group_name,
+        s.name AS subject_name,
+        g.name AS group_name,
         (SELECT COUNT(*) 
            FROM enrollments e 
           WHERE e.lesson_id = l.id 
@@ -498,7 +427,7 @@ const getWeekSchedule = async (req, res) => {
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN groups   g ON l.group_id   = g.id
+       LEFT JOIN \`groups\` g ON l.group_id = g.id
        WHERE l.lesson_date >= ? 
          AND l.lesson_date < DATE_ADD(?, INTERVAL 30 DAY)
     `;
@@ -534,8 +463,7 @@ const getLessonStats = async (req, res) => {
     }
 
     const [stats] = await db.query(
-      `
-      SELECT 
+      `SELECT 
         COUNT(*) as total_lessons,
         SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled_lessons,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_lessons,
@@ -543,8 +471,7 @@ const getLessonStats = async (req, res) => {
         SUM(CASE WHEN lesson_date = CURDATE() THEN 1 ELSE 0 END) as lessons_today,
         SUM(CASE WHEN lesson_date >= CURDATE() AND lesson_date < DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as lessons_this_week
       FROM lessons
-      ${whereClause}
-    `,
+      ${whereClause}`,
       params
     );
 
