@@ -1,10 +1,11 @@
 // backend/controllers/attendanceController.js
 const db = require('../config/db');
 
-// Получить уроки на выбранную дату с фильтрами
 // GET /api/attendance/lessons?date=YYYY-MM-DD&teacher_id=&group_id=
 const getLessonsForDate = async (req, res) => {
   try {
+    console.log('📅 GET /api/attendance/lessons request'); // ✅ Лог
+    
     const { date, teacher_id, group_id } = req.query;
 
     if (!date) {
@@ -14,17 +15,17 @@ const getLessonsForDate = async (req, res) => {
     let query = `
       SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
-        t.middle_name AS teacher_middle_name,
-        g.name        AS group_name,
-        s.name        AS subject_name,
+        COALESCE(t.first_name, 'Без') AS teacher_first_name,
+        COALESCE(t.last_name, 'педагога') AS teacher_last_name,
+        COALESCE(t.middle_name, '') AS teacher_middle_name,
+        COALESCE(g.name, 'Без группы') AS group_name,
+        COALESCE(s.name, 'Без предмета') AS subject_name,
         (SELECT COUNT(*) FROM enrollments e WHERE e.lesson_id = l.id) AS total_enrolled,
         (SELECT COUNT(*) FROM enrollments e WHERE e.lesson_id = l.id AND e.status = 'present') AS total_present,
         (SELECT COUNT(*) FROM enrollments e WHERE e.lesson_id = l.id AND e.status = 'absent') AS total_absent
       FROM lessons l
       LEFT JOIN teachers t ON l.teacher_id = t.id
-      LEFT JOIN groups   g ON l.group_id   = g.id
+      LEFT JOIN groups g ON l.group_id = g.id
       LEFT JOIN subjects s ON l.subject_id = s.id
       WHERE DATE(l.lesson_date) = ?
     `;
@@ -43,14 +44,14 @@ const getLessonsForDate = async (req, res) => {
 
     const [rows] = await db.query(query, params);
 
+    console.log(`✅ Lessons for date fetched: ${rows.length}`); // ✅ Лог
     res.json(rows);
   } catch (error) {
-    console.error('Error fetching lessons for attendance:', error);
-    res.status(500).json({ error: 'Failed to fetch lessons for attendance' });
+    console.error('❌ Error fetching lessons for attendance:', error);
+    res.status(500).json({ error: 'Failed to fetch lessons for attendance', details: error.message });
   }
 };
 
-// Получить посещаемость по конкретному уроку
 // GET /api/attendance/lessons/:id
 const getLessonAttendance = async (req, res) => {
   try {
@@ -59,14 +60,14 @@ const getLessonAttendance = async (req, res) => {
     const [lessons] = await db.query(
       `SELECT 
         l.*,
-        t.first_name  AS teacher_first_name,
-        t.last_name   AS teacher_last_name,
-        t.middle_name AS teacher_middle_name,
-        g.name        AS group_name,
-        s.name        AS subject_name
+        COALESCE(t.first_name, 'Без') AS teacher_first_name,
+        COALESCE(t.last_name, 'педагога') AS teacher_last_name,
+        COALESCE(t.middle_name, '') AS teacher_middle_name,
+        COALESCE(g.name, 'Без группы') AS group_name,
+        COALESCE(s.name, 'Без предмета') AS subject_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
-       LEFT JOIN groups   g ON l.group_id   = g.id
+       LEFT JOIN groups g ON l.group_id = g.id
        LEFT JOIN subjects s ON l.subject_id = s.id
        WHERE l.id = ?`,
       [id]
@@ -80,9 +81,9 @@ const getLessonAttendance = async (req, res) => {
 
     const [students] = await db.query(
       `SELECT 
-        e.id        AS enrollment_id,
-        e.status    AS attendance_status,
-        s.id        AS student_id,
+        e.id AS enrollment_id,
+        e.status AS attendance_status,
+        s.id AS student_id,
         s.first_name,
         s.last_name,
         s.middle_name,
@@ -97,11 +98,10 @@ const getLessonAttendance = async (req, res) => {
     res.json({ lesson, students });
   } catch (error) {
     console.error('Error fetching lesson attendance:', error);
-    res.status(500).json({ error: 'Failed to fetch lesson attendance' });
+    res.status(500).json({ error: 'Failed to fetch lesson attendance', details: error.message });
   }
 };
 
-// Обновить статус посещаемости записи
 // PUT /api/attendance/enrollments/:id { status: 'present' | 'absent' | 'enrolled' }
 const updateEnrollmentStatus = async (req, res) => {
   try {
@@ -112,7 +112,6 @@ const updateEnrollmentStatus = async (req, res) => {
     const { id } = req.params;
     let { status } = req.body;
 
-    // Нормализуем значение
     if (typeof status === 'string') {
       status = status.trim().toLowerCase();
     }
@@ -138,26 +137,19 @@ const updateEnrollmentStatus = async (req, res) => {
       return res.status(404).json({ error: 'Enrollment not found' });
     }
 
-    await db.query('UPDATE enrollments SET status = ? WHERE id = ?', [
-      status,
-      id
-    ]);
+    await db.query('UPDATE enrollments SET status = ? WHERE id = ?', [status, id]);
 
-    const [updated] = await db.query(
-      'SELECT * FROM enrollments WHERE id = ?',
-      [id]
-    );
+    const [updated] = await db.query('SELECT * FROM enrollments WHERE id = ?', [id]);
 
     console.log('Updated enrollment row (from DB):', updated[0]);
 
     res.json(updated[0]);
   } catch (error) {
     console.error('Error updating enrollment status:', error);
-    res.status(500).json({ error: 'Failed to update enrollment status' });
+    res.status(500).json({ error: 'Failed to update enrollment status', details: error.message });
   }
 };
 
-// Добавить ученика на урок (только если он в группе урока)
 // POST /api/attendance/lessons/:lessonId/add-student { student_id }
 const addStudentToLesson = async (req, res) => {
   try {
@@ -168,18 +160,14 @@ const addStudentToLesson = async (req, res) => {
       return res.status(400).json({ error: 'student_id is required' });
     }
 
-    const [lessons] = await db.query('SELECT * FROM lessons WHERE id = ?', [
-      lessonId
-    ]);
+    const [lessons] = await db.query('SELECT * FROM lessons WHERE id = ?', [lessonId]);
     if (lessons.length === 0) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
     const lesson = lessons[0];
 
     if (!lesson.group_id) {
-      return res
-        .status(400)
-        .json({ error: 'Lesson has no group, cannot validate student' });
+      return res.status(400).json({ error: 'Lesson has no group, cannot validate student' });
     }
 
     const [gs] = await db.query(
@@ -187,9 +175,7 @@ const addStudentToLesson = async (req, res) => {
       [lesson.group_id, student_id]
     );
     if (gs.length === 0) {
-      return res.status(400).json({
-        error: 'Student is not in this lesson group'
-      });
+      return res.status(400).json({ error: 'Student is not in this lesson group' });
     }
 
     const [existing] = await db.query(
@@ -197,9 +183,7 @@ const addStudentToLesson = async (req, res) => {
       [lessonId, student_id]
     );
     if (existing.length > 0) {
-      return res
-        .status(400)
-        .json({ error: 'Student is already enrolled to this lesson' });
+      return res.status(400).json({ error: 'Student is already enrolled to this lesson' });
     }
 
     const [result] = await db.query(
@@ -208,19 +192,15 @@ const addStudentToLesson = async (req, res) => {
       [lessonId, student_id]
     );
 
-    const [created] = await db.query(
-      'SELECT * FROM enrollments WHERE id = ?',
-      [result.insertId]
-    );
+    const [created] = await db.query('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
 
     res.status(201).json(created[0]);
   } catch (error) {
     console.error('Error adding student to lesson:', error);
-    res.status(500).json({ error: 'Failed to add student to lesson' });
+    res.status(500).json({ error: 'Failed to add student to lesson', details: error.message });
   }
 };
 
-// Перенос урока
 // PUT /api/attendance/lessons/:id/reschedule { new_date, new_start_time, new_end_time, reason }
 const rescheduleLesson = async (req, res) => {
   try {
@@ -233,9 +213,7 @@ const rescheduleLesson = async (req, res) => {
       });
     }
 
-    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [
-      id
-    ]);
+    const [existing] = await db.query('SELECT * FROM lessons WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
@@ -247,14 +225,12 @@ const rescheduleLesson = async (req, res) => {
       [new_date, new_start_time, new_end_time, reason || null, id]
     );
 
-    const [updated] = await db.query('SELECT * FROM lessons WHERE id = ?', [
-      id
-    ]);
+    const [updated] = await db.query('SELECT * FROM lessons WHERE id = ?', [id]);
 
     res.json(updated[0]);
   } catch (error) {
     console.error('Error rescheduling lesson:', error);
-    res.status(500).json({ error: 'Failed to reschedule lesson' });
+    res.status(500).json({ error: 'Failed to reschedule lesson', details: error.message });
   }
 };
 
