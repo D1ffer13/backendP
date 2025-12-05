@@ -29,7 +29,7 @@ const getGroups = async (req, res) => {
               COALESCE(s.name, 'Без предмета') AS subject_name,
               COALESCE(t.first_name, 'Без') AS teacher_first_name,
               COALESCE(t.last_name, 'педагога') AS teacher_last_name
-       FROM \`groups\` g
+       FROM lesson_groups g
        LEFT JOIN subjects s ON g.subject_id = s.id
        LEFT JOIN teachers t ON g.teacher_id = t.id
        ${whereSql}
@@ -62,12 +62,12 @@ const createGroup = async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO \`groups\` (name, subject_id, teacher_id, max_students, status, notes)
+      `INSERT INTO lesson_groups (name, subject_id, teacher_id, max_students, status, notes)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [name, subject_id, teacher_id, max_students || null, status || 'active', notes || null]
     );
 
-    const [rows] = await db.query('SELECT * FROM `groups` WHERE id = ?', [result.insertId]);
+    const [rows] = await db.query('SELECT * FROM lesson_groups WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating group:', error);
@@ -80,7 +80,7 @@ const updateGroup = async (req, res) => {
     const { id } = req.params;
     const { name, subject_id, teacher_id, max_students, status, notes } = req.body;
 
-    const [existing] = await db.query('SELECT * FROM `groups` WHERE id = ?', [id]);
+    const [existing] = await db.query('SELECT * FROM lesson_groups WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Group not found' });
     }
@@ -97,7 +97,7 @@ const updateGroup = async (req, res) => {
     }
 
     await db.query(
-      `UPDATE \`groups\`
+      `UPDATE lesson_groups
        SET name = ?, subject_id = ?, teacher_id = ?, max_students = ?,
            status = ?, notes = ?
        WHERE id = ?`,
@@ -108,7 +108,7 @@ const updateGroup = async (req, res) => {
       ]
     );
 
-    const [rows] = await db.query('SELECT * FROM `groups` WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT * FROM lesson_groups WHERE id = ?', [id]);
     res.json(rows[0]);
   } catch (error) {
     console.error('Error updating group:', error);
@@ -119,7 +119,7 @@ const updateGroup = async (req, res) => {
 const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query('DELETE FROM `groups` WHERE id = ?', [id]);
+    await db.query('DELETE FROM lesson_groups WHERE id = ?', [id]);
     res.json({ message: 'Group deleted' });
   } catch (error) {
     console.error('Error deleting group:', error);
