@@ -32,7 +32,7 @@ const validateTeacherSubjectGroup = async ({ teacher_id, subject_id, group_id })
   }
 
   const [g] = await db.query(
-    'SELECT 1 FROM `groups` WHERE id = ? AND teacher_id = ? AND subject_id = ?',
+    'SELECT 1 FROM lesson_groups WHERE id = ? AND teacher_id = ? AND subject_id = ?',
     [group_id, teacher_id, subject_id]
   );
   if (g.length === 0) {
@@ -64,7 +64,7 @@ const getAllLessons = async (req, res) => {
       FROM lessons l
       LEFT JOIN teachers t ON l.teacher_id = t.id
       LEFT JOIN subjects s ON l.subject_id = s.id
-      LEFT JOIN \`groups\` g ON l.group_id = g.id
+      LEFT JOIN lesson_groups g ON l.group_id = g.id
       WHERE 1=1
     `;
 
@@ -134,7 +134,7 @@ const getLessonById = async (req, res) => {
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN \`groups\` g ON l.group_id = g.id
+       LEFT JOIN lesson_groups g ON l.group_id = g.id
        WHERE l.id = ?`,
       [id]
     );
@@ -264,7 +264,7 @@ const createLesson = async (req, res) => {
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN \`groups\` g ON l.group_id = g.id
+       LEFT JOIN lesson_groups g ON l.group_id = g.id
        WHERE l.id = ?`,
       [lessonId]
     );
@@ -371,7 +371,7 @@ const updateLesson = async (req, res) => {
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN \`groups\` g ON l.group_id = g.id
+       LEFT JOIN lesson_groups g ON l.group_id = g.id
        WHERE l.id = ?`,
       [id]
     );
@@ -427,7 +427,7 @@ const getWeekSchedule = async (req, res) => {
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
        LEFT JOIN subjects s ON l.subject_id = s.id
-       LEFT JOIN \`groups\` g ON l.group_id = g.id
+       LEFT JOIN lesson_groups g ON l.group_id = g.id
        WHERE l.lesson_date >= ? 
          AND l.lesson_date < DATE_ADD(?, INTERVAL 30 DAY)
     `;
