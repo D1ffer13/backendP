@@ -12,8 +12,9 @@ const PORT = process.env.PORT || 8080;
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://dynamic-nourishment-production.up.railway.app', // сюда подставь реальный URL фронта
+  'https://brave-surprise-production-120b.up.railway.app', // ✅ новый URL фронтенда
 ];
+
 
 app.use(cors({
   origin: (origin, callback) => {
