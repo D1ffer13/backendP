@@ -1,10 +1,9 @@
 // backend/controllers/attendanceController.js
 const db = require('../config/db');
 
-// GET /api/attendance/lessons?date=YYYY-MM-DD&teacher_id=&group_id=
 const getLessonsForDate = async (req, res) => {
   try {
-    console.log('📅 GET /api/attendance/lessons request'); // ✅ Лог
+    console.log('📅 GET /api/attendance/lessons request');
     
     const { date, teacher_id, group_id } = req.query;
 
@@ -25,7 +24,7 @@ const getLessonsForDate = async (req, res) => {
         (SELECT COUNT(*) FROM enrollments e WHERE e.lesson_id = l.id AND e.status = 'absent') AS total_absent
       FROM lessons l
       LEFT JOIN teachers t ON l.teacher_id = t.id
-      LEFT JOIN groups g ON l.group_id = g.id
+      LEFT JOIN \`groups\` g ON l.group_id = g.id
       LEFT JOIN subjects s ON l.subject_id = s.id
       WHERE DATE(l.lesson_date) = ?
     `;
@@ -44,7 +43,7 @@ const getLessonsForDate = async (req, res) => {
 
     const [rows] = await db.query(query, params);
 
-    console.log(`✅ Lessons for date fetched: ${rows.length}`); // ✅ Лог
+    console.log(`✅ Lessons for date fetched: ${rows.length}`);
     res.json(rows);
   } catch (error) {
     console.error('❌ Error fetching lessons for attendance:', error);
@@ -52,7 +51,6 @@ const getLessonsForDate = async (req, res) => {
   }
 };
 
-// GET /api/attendance/lessons/:id
 const getLessonAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -67,7 +65,7 @@ const getLessonAttendance = async (req, res) => {
         COALESCE(s.name, 'Без предмета') AS subject_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
-       LEFT JOIN groups g ON l.group_id = g.id
+       LEFT JOIN \`groups\` g ON l.group_id = g.id
        LEFT JOIN subjects s ON l.subject_id = s.id
        WHERE l.id = ?`,
       [id]
@@ -102,7 +100,6 @@ const getLessonAttendance = async (req, res) => {
   }
 };
 
-// PUT /api/attendance/enrollments/:id { status: 'present' | 'absent' | 'enrolled' }
 const updateEnrollmentStatus = async (req, res) => {
   try {
     console.log('=== updateEnrollmentStatus CALLED ===');
@@ -128,10 +125,7 @@ const updateEnrollmentStatus = async (req, res) => {
       });
     }
 
-    const [existing] = await db.query(
-      'SELECT * FROM enrollments WHERE id = ?',
-      [id]
-    );
+    const [existing] = await db.query('SELECT * FROM enrollments WHERE id = ?', [id]);
     if (existing.length === 0) {
       console.log('Enrollment not found:', id);
       return res.status(404).json({ error: 'Enrollment not found' });
@@ -150,7 +144,6 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 };
 
-// POST /api/attendance/lessons/:lessonId/add-student { student_id }
 const addStudentToLesson = async (req, res) => {
   try {
     const { lessonId } = req.params;
@@ -201,7 +194,6 @@ const addStudentToLesson = async (req, res) => {
   }
 };
 
-// PUT /api/attendance/lessons/:id/reschedule { new_date, new_start_time, new_end_time, reason }
 const rescheduleLesson = async (req, res) => {
   try {
     const { id } = req.params;
