@@ -24,7 +24,7 @@ const getLessonsForDate = async (req, res) => {
         (SELECT COUNT(*) FROM enrollments e WHERE e.lesson_id = l.id AND e.status = 'absent') AS total_absent
       FROM lessons l
       LEFT JOIN teachers t ON l.teacher_id = t.id
-      LEFT JOIN \`groups\` g ON l.group_id = g.id
+      LEFT JOIN lesson_groups g ON l.group_id = g.id
       LEFT JOIN subjects s ON l.subject_id = s.id
       WHERE DATE(l.lesson_date) = ?
     `;
@@ -65,7 +65,7 @@ const getLessonAttendance = async (req, res) => {
         COALESCE(s.name, 'Без предмета') AS subject_name
        FROM lessons l
        LEFT JOIN teachers t ON l.teacher_id = t.id
-       LEFT JOIN \`groups\` g ON l.group_id = g.id
+       LEFT JOIN lesson_groups g ON l.group_id = g.id
        LEFT JOIN subjects s ON l.subject_id = s.id
        WHERE l.id = ?`,
       [id]
