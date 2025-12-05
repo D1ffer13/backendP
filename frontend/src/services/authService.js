@@ -1,4 +1,3 @@
-// frontend/src/services/authService.js
 import api from './api';
 
 const TOKEN_KEY = 'authToken';
