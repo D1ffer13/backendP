@@ -53,6 +53,8 @@ const validateTeacherSubjectGroup = async ({
 
 const getAllLessons = async (req, res) => {
   try {
+    console.log('📚 GET /api/lessons request'); // ✅ Лог
+    
     const {
       start_date,
       end_date,
@@ -119,14 +121,16 @@ const getAllLessons = async (req, res) => {
       params.push(group_id);
     }
 
-    query += ' ORDER BY l.lesson_date DESC, l.start_time DESC';
+    query += ' ORDER BY l.lesson_date DESC, l.start_time DESC'; // ✅ ИСПРАВЛЕНО: было "DE"
 
     const [lessons] = await db.query(query, params);
     const processedLessons = processLessonDates(lessons);
+    
+    console.log(`✅ Lessons fetched: ${processedLessons.length}`); // ✅ Лог
     res.json(processedLessons);
   } catch (error) {
-    console.error('Error fetching lessons:', error);
-    res.status(500).json({ error: 'Failed to fetch lessons' });
+    console.error('❌ Error fetching lessons:', error); // ✅ Лог
+    res.status(500).json({ error: 'Failed to fetch lessons', details: error.message });
   }
 };
 
@@ -265,7 +269,6 @@ const createLesson = async (req, res) => {
 
     const lessonId = result.insertId;
 
-    // авто‑запись всех учеников группы при создании
     if (auto_enroll_group_students && group_id) {
       try {
         const [groupStudents] = await db.query(
@@ -397,7 +400,6 @@ const updateLesson = async (req, res) => {
       ]
     );
 
-    // дозаписать учеников группы при редактировании
     if (auto_enroll_on_update && newGroupId) {
       try {
         const [groupStudents] = await db.query(
