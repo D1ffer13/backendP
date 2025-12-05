@@ -26,6 +26,8 @@ const register = async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body;
 
+    console.log('📝 Register attempt:', { email }); // ✅ Добавлено
+
     if (!email || !password || !confirmPassword) {
       return res.status(400).json({ message: 'Заполните все поля' });
     }
@@ -36,6 +38,8 @@ const register = async (req, res) => {
 
     // Проверка: есть ли уже пользователь в users
     const [countRows] = await db.query('SELECT COUNT(*) AS cnt FROM users');
+    console.log('👥 Existing users count:', countRows[0].cnt); // ✅ Добавлено
+    
     if (countRows[0].cnt > 0) {
       return res.status(400).json({
         message: 'Аккаунт уже создан. Можно зарегистрировать только один центр.'
@@ -69,12 +73,14 @@ const register = async (req, res) => {
 
     const token = generateToken(user);
 
+    console.log('✅ Registration successful for:', email); // ✅ Добавлено
+
     res.status(201).json({
       user,
       token
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('❌ Register error:', error);
     res.status(500).json({ message: 'Ошибка при регистрации' });
   }
 };
@@ -84,7 +90,10 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('🔍 Login attempt:', { email, hasPassword: !!password }); // ✅ Добавлено
+
     if (!email || !password) {
+      console.log('❌ Missing credentials'); // ✅ Добавлено
       return res.status(400).json({ message: 'Введите email и пароль' });
     }
 
@@ -94,16 +103,31 @@ const login = async (req, res) => {
     );
     const userRow = rows[0];
 
+    console.log('👤 User found:', userRow ? 'Yes' : 'No'); // ✅ Добавлено
+    if (userRow) {
+      console.log('📊 User data:', {
+        id: userRow.id,
+        email: userRow.email,
+        role: userRow.role,
+        is_active: userRow.is_active
+      }); // ✅ Добавлено
+    }
+
     if (!userRow) {
+      console.log('❌ User not found in database'); // ✅ Добавлено
       return res.status(400).json({ message: 'Неверный email или пароль' });
     }
 
     if (userRow.is_active === 0) {
+      console.log('❌ User account is inactive'); // ✅ Добавлено
       return res.status(403).json({ message: 'Аккаунт неактивен' });
     }
 
     const isMatch = await bcrypt.compare(password, userRow.password_hash);
+    console.log('🔐 Password match:', isMatch); // ✅ Добавлено
+
     if (!isMatch) {
+      console.log('❌ Password does not match'); // ✅ Добавлено
       return res.status(400).json({ message: 'Неверный email или пароль' });
     }
 
@@ -122,12 +146,14 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
 
+    console.log('✅ Login successful for:', email); // ✅ Добавлено
+
     res.json({
       user,
       token
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({ message: 'Ошибка при входе' });
   }
 };
@@ -137,6 +163,8 @@ const getCurrentUser = async (req, res) => {
   try {
     const { id } = req.user;
 
+    console.log('🔍 Getting current user:', id); // ✅ Добавлено
+
     const [rows] = await db.query(
       'SELECT id, email, role, teacher_id, is_active, created_at, updated_at, last_login FROM users WHERE id = ?',
       [id]
@@ -144,12 +172,14 @@ const getCurrentUser = async (req, res) => {
     const user = rows[0];
 
     if (!user) {
+      console.log('❌ User not found:', id); // ✅ Добавлено
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
+    console.log('✅ Current user retrieved:', user.email); // ✅ Добавлено
     res.json(user);
   } catch (error) {
-    console.error('GetCurrentUser error:', error);
+    console.error('❌ GetCurrentUser error:', error);
     res.status(500).json({ message: 'Ошибка при получении пользователя' });
   }
 };
@@ -159,6 +189,8 @@ const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmNewPassword } = req.body;
     const { id } = req.user;
+
+    console.log('🔐 Change password attempt for user:', id); // ✅ Добавлено
 
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       return res.status(400).json({ message: 'Заполните все поля' });
@@ -175,10 +207,13 @@ const changePassword = async (req, res) => {
     const userRow = rows[0];
 
     if (!userRow) {
+      console.log('❌ User not found for password change:', id); // ✅ Добавлено
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
     const isMatch = await bcrypt.compare(currentPassword, userRow.password_hash);
+    console.log('🔐 Current password match:', isMatch); // ✅ Добавлено
+
     if (!isMatch) {
       return res.status(400).json({ message: 'Текущий пароль неверный' });
     }
@@ -190,16 +225,18 @@ const changePassword = async (req, res) => {
       [passwordHash, id]
     );
 
+    console.log('✅ Password changed successfully for:', userRow.email); // ✅ Добавлено
+
     res.json({ message: 'Пароль успешно изменён' });
   } catch (error) {
-    console.error('ChangePassword error:', error);
+    console.error('❌ ChangePassword error:', error);
     res.status(500).json({ message: 'Ошибка при смене пароля' });
   }
 };
 
 // POST /api/auth/logout
 const logout = async (req, res) => {
-  // Токен хранится на фронте, тут просто отвечаем успехом
+  console.log('👋 Logout request'); // ✅ Добавлено
   res.json({ message: 'Выход выполнен' });
 };
 
