@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { authService } from './authService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://backendp-production.up.railway.app';
 
@@ -8,8 +7,9 @@ const api = axios.create({
   withCredentials: false,
 });
 
+// Interceptor для добавления токена
 api.interceptors.request.use((config) => {
-  const token = authService.getToken();
+  const token = localStorage.getItem('authToken');  // ✅ Прямое обращение к localStorage
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
